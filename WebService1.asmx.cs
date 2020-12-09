@@ -911,19 +911,33 @@ namespace WebApplication1
             while (rd.Read())
             {
                 Objet obj = new Objet();
-                obj.Code_Object = rd["Code_Object"].ToString() != "" ? rd["Code_Object"].ToString() : "";
-                obj.Object_type = rd["Object_type"].ToString() != "" ? rd["Object_type"].ToString() : "";
+                if (rd["Object_Global_Type"].ToString().Trim().ToUpper() == "NODE")
+                {
+                    obj.Code_Object = rd["Code_Object"].ToString() != "" ? rd["Code_Object"].ToString() : "";
+                    obj.Object_type = rd["Object_type"].ToString() != "" ? rd["Object_type"].ToString() : "";
 
-                obj.Object_Global_Type = rd["Object_Global_Type"].ToString() != "" ? rd["Object_Global_Type"].ToString() : "";
-                string txt = ConvertLambertToWKT(rd["Geom_WKT"].ToString(), rd["Object_Global_Type"].ToString());
-                //obj.Geom_WKT = rd["Geom_WKT"].ToString() != "" ? rd["Geom_WKT"].ToString() : "";
-                obj.Geom_WKT = txt;
-                obj.Status_Audit = rd["Status_Audit"].ToString() != "" ? rd["Status_Audit"].ToString() : "";
-                obj.Status_Recovery = rd["Status_Recovery"].ToString() != "" ? rd["Status_Recovery"].ToString() : "";
-                obj.Status_Deployment = rd["Status"].ToString() != "" ? rd["Status"].ToString() : "";
+                    obj.Object_Global_Type = rd["Object_Global_Type"].ToString() != "" ? rd["Object_Global_Type"].ToString() : "";
+                    string txt = ConvertLambertToWKT(rd["Geom_WKT"].ToString(), rd["Object_Global_Type"].ToString());
+                    //obj.Geom_WKT = rd["Geom_WKT"].ToString() != "" ? rd["Geom_WKT"].ToString() : "";
+                    obj.Geom_WKT = txt;
+                    obj.Status_Audit = rd["Status_Audit"].ToString() != "" ? rd["Status_Audit"].ToString() : "";
+                    obj.Status_Recovery = rd["Status_Recovery"].ToString() != "" ? rd["Status_Recovery"].ToString() : "";
+                    obj.Status_Deployment = rd["Status"].ToString() != "" ? rd["Status"].ToString() : "";
+                }
+                else
+                {
+                    obj.Code_Object = rd["Code_Object"].ToString() != "" ? rd["Code_Object"].ToString() : "";
+                    obj.Object_type = rd["Object_type"].ToString() != "" ? rd["Object_type"].ToString() : "";
 
-
-                if (rd["Object_Global_Type"].ToString().ToUpper() == "NODE")
+                    obj.Object_Global_Type = rd["Object_Global_Type"].ToString() != "" ? rd["Object_Global_Type"].ToString() : "";
+                    string txt = ConvertLambertToWKT(rd["Geom_WKT"].ToString(), rd["Object_Global_Type"].ToString());
+                    //obj.Geom_WKT = rd["Geom_WKT"].ToString() != "" ? rd["Geom_WKT"].ToString() : "";
+                    obj.Geom_WKT = txt;
+                    obj.Status_Audit = rd["Status_Audit"].ToString() != "" ? rd["Status_Audit"].ToString() : "";
+                    obj.Status_Recovery = rd["Status_Recovery"].ToString() != "" ? rd["Status_Recovery"].ToString() : "";
+                    obj.Status_Deployment = rd["Status"].ToString() != "" ? rd["Status"].ToString() : "";
+                }
+            if (rd["Object_Global_Type"].ToString().ToUpper() == "NODE")
                 {
                     listNodes.Add(obj);
                 }
@@ -1191,15 +1205,14 @@ namespace WebApplication1
             List<string> liste = new List<string>();
             List<Point> listept = new List<Point>();
             List<string> listeType = new List<string>();
-            string net = Geom.ToUpper().Replace("POINT", "").Replace("]", "").Replace("LINESTRING", "").Replace("[", "").Replace("POLYGON", "");
-            if (net != "")
-            {
-                // Séparation de la latitude et de la longitude
-                string[] netSplit = net.Split(new Char[] { ',' });
-
-                int i = 0;
+            bool multi = false;
+            if (Geom != "")
+            {              
                 if (GlobalType == "NODE")
                 {
+                    string net = Geom.ToUpper().Replace("POINT", "").Replace("]", "").Replace("[", "");
+                    string[] netSplit = net.Split(new Char[] { ',' });
+                    int i = 0;
                     while (i < ((netSplit.Length) / 2))
                     {
                         // Conversion du string en double :
@@ -1216,41 +1229,179 @@ namespace WebApplication1
                 }
                 else if (GlobalType == "CABLE")
                 {
-                    string linestring = "";
-                    linestring = "LineString[";
-                    while (i < ((netSplit.Length) / 2))
-                    {
-                        double longiDoub = Convert.ToDouble(netSplit[(2 * i) + 1].Replace('.', ','));
-                        double latiDoub = Convert.ToDouble(netSplit[2 * i].Replace('.', ','));
-                        Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
-                        linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
-                        if (i < ((netSplit.Length) / 2) - 1)
-                        {
-                            linestring += ",";
+                    string baseNet = Geom.ToUpper().Replace("LINESTRING[", "");
+                    string baseStartNet = baseNet.Replace("[[", "/");
+                    string[] baseSplitNet = baseStartNet.Split('/');
+                    string linestring="LineString[";
+                    if(baseSplitNet.Length > 1) { 
+                        int i = 0;
+                        while (i < baseSplitNet.Length-1) {
+                            linestring += "[";
+                            int a = 0;
+                            string startNet = baseSplitNet[i+1].Replace("]", "").Replace("[", "");
+                            string[] splitNet = startNet.Split(',');
+                            while (a < splitNet.Length-1)
+                            {
+                                double longiDoub = Convert.ToDouble(splitNet[a].Replace('.', ','));
+                                double latiDoub = Convert.ToDouble(splitNet[a+1].Replace('.', ','));
+                                Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                                listept.Add(pt);
+                                linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                                a += 2;
+                                if (a < splitNet.Length-1)
+                                {
+                                    linestring += ",";
+                                }
+                            }
+                            linestring += "]";
+                            if (i < baseSplitNet.Length-1) {
+                                linestring += ",";
+                            }
+                            i++;
                         }
-                        i++;
+                    }
+                    else
+                    {
+                        int a = 0;
+                        string startNet = baseNet.Replace("]", "").Replace("[", "");
+                        string[] splitNet = startNet.Split(',');
+                        while (a < splitNet.Length/2)
+                        {
+                            
+                            double longiDoub = Convert.ToDouble(splitNet[(2*a)+1].Replace('.', ','));
+                            double latiDoub = Convert.ToDouble(splitNet[2*a].Replace('.', ','));
+                            Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                            listept.Add(pt);
+                            linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                            a ++;
+                            if (a < (splitNet.Length/2))
+                            {
+                                linestring += ",";
+                            }
+                        }
+                    }
+                    linestring += "]";
+                    //    string net = Geom.ToUpper().Replace("LINESTRING[", "").Replace("],[", "/").Replace("[", "");
+                    //    string[] netSplit = net.Split(new Char[] { '/' });                   
+                    //    string linestring = "LineString[";
+                    //    int a = 0;
+                    //    while(a < netSplit.Length)
+                    //    {
+                    //        if(netSplit.Length > 1) { 
+                    //            string[] netSplitReturns = netSplit[a].Split(',');
+                    //            int i = 0;
+                    //            linestring += "[";
+                    //            while (i < (netSplitReturns.Length)/2)
+                    //            {
+                    //                double longiDoub = Convert.ToDouble(netSplitReturns[(2 * i) + 1].Replace('.', ',').Replace("]", ""));
+                    //                double latiDoub = Convert.ToDouble(netSplitReturns[2 * i].Replace('.', ','));
+                    //                Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                    //                listept.Add(pt);
+                    //                linestring += pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                    //                if (i < ((netSplitReturns.Length) / 2) -1)
+                    //                {
+                    //                    linestring += ",";
+                    //                }
+                    //                i++;
+                    //            } 
+                    //        }
+                    //        else
+                    //        {
+                    //            string[] netSplitReturns = netSplit[a].Split(',');
+                    //            int i = 0;
+                    //            while (i < (netSplitReturns.Length) / 2)
+                    //            {
+                    //                double longiDoub = Convert.ToDouble(netSplitReturns[(2 * i) + 1].Replace('.', ',').Replace("]", ""));
+                    //                double latiDoub = Convert.ToDouble(netSplitReturns[2 * i].Replace('.', ','));
+                    //                Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                    //                listept.Add(pt);
+                    //                linestring += pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                    //                if (i < ((netSplitReturns.Length) / 2)-1)
+                    //                {
+                    //                    linestring += ",";
+                    //                }
+                    //                i++;
+                    //            }
+                    //        }
+                    //        a++;
+                    //    }
+                    //    linestring += "]";
+                    //string newLinestring = linestring.Replace("],]","]]");
+                    output = linestring;
+                }                    
+                else if (GlobalType == "ZONE")
+                {
+                    string linestring;
+                    bool multiBool = false;
+                    if (Geom.ToUpper().Contains("MULTI"))
+                    {
+                        multiBool = true;
+                    }
+                    string baseNet = Geom.ToUpper().Replace("POLYGON[", "").Replace("MULTI","");
+                    string baseStartNet = baseNet.Replace("[[", "/");
+                    string[] baseSplitNet = baseStartNet.Split('/');
+                    if (multiBool)
+                    {
+                        linestring = "MULTIPOLYGON[";
+                    }
+                    else
+                    {
+                        linestring = "POLYGON[";
+                    }
+                    if (baseSplitNet.Length > 1)
+                    {
+                        int i = 0;
+                        while (i < baseSplitNet.Length - 1)
+                        {
+                            linestring += "[";
+                            int a = 0;
+                            string startNet = baseSplitNet[i + 1].Replace("]", "").Replace("[", "");
+                            string[] splitNet = startNet.Split(',');
+                            while (a < splitNet.Length - 1)
+                            {
+                                double longiDoub = Convert.ToDouble(splitNet[a].Replace('.', ','));
+                                double latiDoub = Convert.ToDouble(splitNet[a + 1].Replace('.', ','));
+                                Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                                listept.Add(pt);
+                                linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                                a += 2;
+                                if (a < splitNet.Length - 1)
+                                {
+                                    linestring += ",";
+                                }
+                            }
+                            linestring += "]";
+                            if (i < baseSplitNet.Length - 2)
+                            {
+                                linestring += ",";
+                            }
+                            i++;
+                        }
+                    }
+                    else
+                    {
+                        linestring += "[";
+                        int a = 0;
+                        string startNet = baseNet.Replace("]", "").Replace("[", "");
+                        string[] splitNet = startNet.Split(',');
+                        while (a < splitNet.Length / 2)
+                        {
+
+                            double longiDoub = Convert.ToDouble(splitNet[(2 * a) + 1].Replace('.', ','));
+                            double latiDoub = Convert.ToDouble(splitNet[2 * a].Replace('.', ','));
+                            Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                            listept.Add(pt);
+                            linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                            a++;
+                            if (a < (splitNet.Length / 2))
+                            {
+                                linestring += ",";
+                            }
+                        }
+                        linestring += "]";
                     }
                     linestring += "]";
                     output = linestring;
-                }
-                else if (GlobalType == "ZONE")
-                {
-                    string zone = "";
-                    zone = "POLYGON[[";
-                    while (i < ((netSplit.Length) / 2))
-                    {
-                        double longiDoub = Convert.ToDouble(netSplit[(2 * i) + 1].Replace('.', ','));
-                        double latiDoub = Convert.ToDouble(netSplit[2 * i].Replace('.', ','));
-                        Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
-                        zone += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
-                        if (i < ((netSplit.Length) / 2) - 1)
-                        {
-                            zone += ",";
-                        }
-                        i++;
-                    }
-                    zone += "]";
-                    output = zone;
                 }
             }
             return output;
