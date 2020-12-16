@@ -1240,14 +1240,14 @@ namespace WebApplication1
                             int a = 0;
                             string startNet = baseSplitNet[i+1].Replace("]", "").Replace("[", "");
                             string[] splitNet = startNet.Split(',');
-                            while (a < splitNet.Length-1)
+                            while (a < splitNet.Length / 2)
                             {
-                                double longiDoub = Convert.ToDouble(splitNet[a].Replace('.', ','));
-                                double latiDoub = Convert.ToDouble(splitNet[a+1].Replace('.', ','));
+                                double longiDoub = Convert.ToDouble(splitNet[(2 * a) + 1].Replace('.', ','));
+                                double latiDoub = Convert.ToDouble(splitNet[2 * a].Replace('.', ','));
                                 Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
                                 listept.Add(pt);
                                 linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
-                                a += 2;
+                                a ++;
                                 if (a < splitNet.Length-1)
                                 {
                                     linestring += ",";
@@ -1357,18 +1357,38 @@ namespace WebApplication1
                             int a = 0;
                             string startNet = baseSplitNet[i + 1].Replace("]", "").Replace("[", "");
                             string[] splitNet = startNet.Split(',');
-                            while (a < splitNet.Length - 1)
+                            
+                            while (a < splitNet.Length / 2)
                             {
-                                double longiDoub = Convert.ToDouble(splitNet[a].Replace('.', ','));
-                                double latiDoub = Convert.ToDouble(splitNet[a + 1].Replace('.', ','));
-                                Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
-                                listept.Add(pt);
-                                linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
-                                a += 2;
-                                if (a < splitNet.Length - 1)
+                                try
                                 {
-                                    linestring += ",";
+                                    double longiDoub = Convert.ToDouble(splitNet[(2 * a) + 1].Replace('.', ','));
+                                    double latiDoub = Convert.ToDouble(splitNet[2 * a].Replace('.', ','));
+                                    Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                                    listept.Add(pt);
+                                    linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                                    a++;
+                                    if (a < (splitNet.Length / 2))
+                                    {
+                                        linestring += ",";
+                                    }
                                 }
+                                catch (Exception e)
+                                {
+                                    Error errorObject = new Error();
+                                    errorObject.Message = (string)"Msg :" + e.Message ;
+                                    errorObject.Id = 22;
+                                }
+                                //double longiDoub = Convert.ToDouble(splitNet[(2 * a) + 1].Replace('.', ','));
+                                //double latiDoub = Convert.ToDouble(splitNet[2 * a].Replace('.', ','));
+                                //Point pt = Lambert.convertToWGS84Deg(latiDoub, longiDoub, Zone.Lambert93);
+                                //listept.Add(pt);
+                                //linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
+                                //a ++;
+                                //if (a < splitNet.Length - 1)
+                                //{
+                                //    linestring += ",";
+                                //}
                             }
                             linestring += "]";
                             if (i < baseSplitNet.Length - 2)
