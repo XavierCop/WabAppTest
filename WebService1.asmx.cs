@@ -1229,13 +1229,24 @@ namespace WebApplication1
                 }
                 else if (GlobalType == "CABLE")
                 {
-                    string baseNet = Geom.ToUpper().Replace("LINESTRING[", "");
+                    bool multiBool = false;
+                    if (Geom.ToUpper().Contains("MULTI"))
+                    {
+                        multiBool = true;
+                    }
+                    string baseNet = Geom.ToUpper().Replace("LINESTRING[", "").Replace("MULTI", "");
                     string baseStartNet = baseNet.Replace("[[", "/");
                     string[] baseSplitNet = baseStartNet.Split('/');
-                    string linestring="LineString[";
-                    if(baseSplitNet.Length > 1) { 
+                    string linestring = "";
+                    if (multiBool) {
+                        linestring += "MultiLineString[";
+                    }
+                    else { 
+                    linestring+="LineString[";
+                    }
+                    if (baseSplitNet.Length > 1) { 
                         int i = 0;
-                        while (i < baseSplitNet.Length-1) {
+                        while (i < baseSplitNet.Length - 1) {
                             linestring += "[";
                             int a = 0;
                             string startNet = baseSplitNet[i+1].Replace("]", "").Replace("[", "");
@@ -1248,17 +1259,21 @@ namespace WebApplication1
                                 listept.Add(pt);
                                 linestring += "[" + pt.y.ToString().Replace(',', '.') + "," + pt.x.ToString().Replace(',', '.') + "]";
                                 a ++;
-                                if (a < splitNet.Length-1)
+                                if (a < (splitNet.Length / 2))
                                 {
                                     linestring += ",";
                                 }
                             }
                             linestring += "]";
-                            if (i < baseSplitNet.Length-1) {
+                            if (i < baseSplitNet.Length-2) {
                                 linestring += ",";
                             }
                             i++;
                         }
+                        //if (multiBool)
+                        //{
+                        //    linestring += "]";
+                        //}
                     }
                     else
                     {
@@ -1342,7 +1357,7 @@ namespace WebApplication1
                     string[] baseSplitNet = baseStartNet.Split('/');
                     if (multiBool)
                     {
-                        linestring = "MULTIPOLYGON[";
+                        linestring = "MULTIPOLYGON[[";
                     }
                     else
                     {
@@ -1391,11 +1406,16 @@ namespace WebApplication1
                                 //}
                             }
                             linestring += "]";
+                            
                             if (i < baseSplitNet.Length - 2)
                             {
                                 linestring += ",";
                             }
                             i++;
+                        }
+                        if (multiBool)
+                        {
+                            linestring += "]";
                         }
                     }
                     else
